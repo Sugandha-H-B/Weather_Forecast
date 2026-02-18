@@ -158,16 +158,16 @@ export default function Weather() {
   };
 
   const popularCities = [
-    "New York",
-    "London",
-    "Tokyo",
-    "Paris",
-    "Dubai",
-    "Sydney",
-    "Singapore",
-    "Toronto",
-    "Amsterdam",
-    "Barcelona",
+    "Mumbai",
+    "Delhi",
+    "Bangalore",
+    "Hyderabad",
+    "Chennai",
+    "Kolkata",
+    "Pune",
+    "Ahmedabad",
+    "Jaipur",
+    "Goa",
   ];
 
   const handleCityClick = (cityName: string) => {
