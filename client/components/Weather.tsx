@@ -157,6 +157,24 @@ export default function Weather() {
     }
   };
 
+  const popularCities = [
+    "New York",
+    "London",
+    "Tokyo",
+    "Paris",
+    "Dubai",
+    "Sydney",
+    "Singapore",
+    "Toronto",
+    "Amsterdam",
+    "Barcelona",
+  ];
+
+  const handleCityClick = (cityName: string) => {
+    setCity(cityName);
+    fetchWeather(cityName);
+  };
+
   const getWeatherIcon = (iconCode: string, size = 64) => {
     const iconProps = { size, className: "text-cyan-300" };
     const code = parseInt(iconCode);
@@ -218,6 +236,22 @@ export default function Weather() {
             </div>
           </div>
         </form>
+
+        {/* Popular Cities */}
+        <div className="mb-8">
+          <p className="text-gray-400 text-sm mb-3">Popular Cities:</p>
+          <div className="flex flex-wrap gap-2">
+            {popularCities.map((cityName) => (
+              <button
+                key={cityName}
+                onClick={() => handleCityClick(cityName)}
+                className="glass-button px-4 py-2 text-sm text-white rounded-full hover:text-cyan-300 transition-all"
+              >
+                {cityName}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {error && (
           <div className="glass p-4 mb-8 border-red-500/30 bg-red-500/10">
