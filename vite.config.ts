@@ -23,9 +23,6 @@ export default defineConfig(({ mode }) => ({
       "@shared": path.resolve(__dirname, "./shared"),
     },
   },
-  define: {
-    'import.meta.env.VITE_ACCUWEATHER_API_KEY': JSON.stringify(process.env.VITE_ACCUWEATHER_API_KEY),
-  },
 }));
 
 function expressPlugin(): Plugin {

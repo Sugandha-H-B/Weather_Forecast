@@ -37,110 +37,30 @@ interface ForecastDay {
 
 export default function Weather() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [city, setCity] = useState("San Francisco");
+  const [city, setCity] = useState("Bangalore");
   const [inputCity, setInputCity] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const apiKey = import.meta.env.VITE_ACCUWEATHER_API_KEY;
-
   useEffect(() => {
     fetchWeather(city);
   }, []);
-
-  const getLocationKey = async (cityName: string): Promise<string> => {
-    try {
-      const response = await fetch(
-        `https://dataservice.accuweather.com/locations/v1/cities/search?apikey=${apiKey}&q=${cityName}&details=true`
-      );
-
-      if (!response.ok) {
-        throw new Error("City not found");
-      }
-
-      const data = await response.json();
-      if (data.length === 0) {
-        throw new Error("City not found");
-      }
-
-      return data[0].Key;
-    } catch (err) {
-      throw err;
-    }
-  };
 
   const fetchWeather = async (cityName: string) => {
     try {
       setLoading(true);
       setError("");
 
-      if (!apiKey) {
-        setError(
-          "Weather API key not configured. Please set VITE_ACCUWEATHER_API_KEY"
-        );
-        setLoading(false);
-        return;
+      // Call backend API endpoint
+      const response = await fetch(`/api/weather?city=${encodeURIComponent(cityName)}`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch weather");
       }
 
-      // Get location key from city name
-      const locationKey = await getLocationKey(cityName);
-
-      // Current weather
-      const currentResponse = await fetch(
-        `https://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}&details=true`
-      );
-
-      if (!currentResponse.ok) {
-        throw new Error("Failed to fetch current weather");
-      }
-
-      const currentData = await currentResponse.json();
-      const current = currentData[0];
-
-      // 5-day forecast
-      const forecastResponse = await fetch(
-        `https://dataservice.accuweather.com/forecasts/v1/daily/5day/${locationKey}?apikey=${apiKey}&details=true&metric=true`
-      );
-
-      if (!forecastResponse.ok) {
-        throw new Error("Failed to fetch forecast");
-      }
-
-      const forecastData = await forecastResponse.json();
-
-      const forecast: ForecastDay[] = forecastData.DailyForecasts.map(
-        (day: any) => ({
-          day: new Date(day.Date).toLocaleDateString("en-US", {
-            weekday: "short",
-          }),
-          high: Math.round(day.Temperature?.Maximum?.Value || 20),
-          low: Math.round(day.Temperature?.Minimum?.Value || 10),
-          condition: day.Headline?.Category || "Clear",
-          icon: (day.Headline?.Icon || 1).toString().padStart(2, "0"),
-        })
-      );
-
-      // Get city details
-      const detailsResponse = await fetch(
-        `https://dataservice.accuweather.com/locations/v1/${locationKey}?apikey=${apiKey}&details=true`
-      );
-      const detailsData = await detailsResponse.json();
-
-      setWeather({
-        city: detailsData?.LocalizedName || cityName,
-        country: detailsData?.Country?.ID || "US",
-        temperature: Math.round(current?.Temperature?.Metric?.Value || 20),
-        feelsLike: Math.round(
-          current?.RealFeelTemperature?.Metric?.Value || current?.Temperature?.Metric?.Value || 20
-        ),
-        condition: current?.WeatherText || "Clear",
-        humidity: current?.RelativeHumidity || 50,
-        windSpeed: Math.round(current?.Wind?.Speed?.Metric?.Value || 0),
-        visibility: Math.round(current?.Visibility?.Metric?.Value || 10),
-        pressure: current?.Pressure?.Metric?.Value || 1013,
-        icon: (current?.WeatherIcon || 1).toString().padStart(2, "0"),
-        forecast: forecast.slice(0, 5),
-      });
+      const data: WeatherData = await response.json();
+      setWeather(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch weather");
     } finally {
