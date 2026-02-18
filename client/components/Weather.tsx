@@ -99,7 +99,7 @@ export default function Weather() {
 
       // 5-day forecast
       const forecastResponse = await fetch(
-        `https://dataservice.accuweather.com/forecasts/v1/daily/5day/${locationKey}?apikey=${apiKey}&details=true`
+        `https://dataservice.accuweather.com/forecasts/v1/daily/5day/${locationKey}?apikey=${apiKey}&details=true&metric=true`
       );
 
       if (!forecastResponse.ok) {
@@ -113,10 +113,10 @@ export default function Weather() {
           day: new Date(day.Date).toLocaleDateString("en-US", {
             weekday: "short",
           }),
-          high: Math.round(day.Temperature.Maximum.Value),
-          low: Math.round(day.Temperature.Minimum.Value),
-          condition: day.Headline.Category,
-          icon: day.Headline.Icon.toString().padStart(2, "0"),
+          high: Math.round(day.Temperature?.Maximum?.Value || 20),
+          low: Math.round(day.Temperature?.Minimum?.Value || 10),
+          condition: day.Headline?.Category || "Clear",
+          icon: (day.Headline?.Icon || 1).toString().padStart(2, "0"),
         })
       );
 
@@ -127,18 +127,18 @@ export default function Weather() {
       const detailsData = await detailsResponse.json();
 
       setWeather({
-        city: detailsData.LocalizedName,
-        country: detailsData.Country.ID,
-        temperature: Math.round(current.Temperature.Metric.Value),
+        city: detailsData?.LocalizedName || cityName,
+        country: detailsData?.Country?.ID || "US",
+        temperature: Math.round(current?.Temperature?.Metric?.Value || 20),
         feelsLike: Math.round(
-          current.RealFeelTemperature?.Metric.Value || current.Temperature.Metric.Value
+          current?.RealFeelTemperature?.Metric?.Value || current?.Temperature?.Metric?.Value || 20
         ),
-        condition: current.WeatherText,
-        humidity: current.RelativeHumidity || 0,
-        windSpeed: Math.round(current.Wind?.Speed.Metric.Value || 0),
-        visibility: Math.round(current.Visibility?.Metric.Value || 10),
-        pressure: current.Pressure?.Metric.Value || 0,
-        icon: current.WeatherIcon.toString().padStart(2, "0"),
+        condition: current?.WeatherText || "Clear",
+        humidity: current?.RelativeHumidity || 50,
+        windSpeed: Math.round(current?.Wind?.Speed?.Metric?.Value || 0),
+        visibility: Math.round(current?.Visibility?.Metric?.Value || 10),
+        pressure: current?.Pressure?.Metric?.Value || 1013,
+        icon: (current?.WeatherIcon || 1).toString().padStart(2, "0"),
         forecast: forecast.slice(0, 5),
       });
     } catch (err) {
