@@ -158,16 +158,17 @@ export default function Weather() {
   };
 
   const popularCities = [
-    "Mumbai",
-    "Delhi",
+    // Karnataka Cities
     "Bangalore",
-    "Hyderabad",
-    "Chennai",
-    "Kolkata",
-    "Pune",
-    "Ahmedabad",
-    "Jaipur",
-    "Goa",
+    "Mysore",
+    "Mangalore",
+    "Hubli",
+    "Belgaum",
+    "Shimoga",
+    "Tumkur",
+    "Hassan",
+    "Kolar",
+    "Davangere",
   ];
 
   const handleCityClick = (cityName: string) => {
