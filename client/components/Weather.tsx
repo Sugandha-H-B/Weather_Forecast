@@ -12,7 +12,6 @@ import {
   CloudSnow,
   CloudDrizzle,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface WeatherData {
   city: string;
@@ -43,11 +42,32 @@ export default function Weather() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const apiKey = import.meta.env.VITE_WEATHER_API_KEY;
+  const apiKey = import.meta.env.VITE_ACCUWEATHER_API_KEY;
 
   useEffect(() => {
     fetchWeather(city);
   }, []);
+
+  const getLocationKey = async (cityName: string): Promise<string> => {
+    try {
+      const response = await fetch(
+        `https://dataservice.accuweather.com/locations/v1/cities/search?apikey=${apiKey}&q=${cityName}&details=true`
+      );
+
+      if (!response.ok) {
+        throw new Error("City not found");
+      }
+
+      const data = await response.json();
+      if (data.length === 0) {
+        throw new Error("City not found");
+      }
+
+      return data[0].Key;
+    } catch (err) {
+      throw err;
+    }
+  };
 
   const fetchWeather = async (cityName: string) => {
     try {
@@ -56,52 +76,69 @@ export default function Weather() {
 
       if (!apiKey) {
         setError(
-          "Weather API key not configured. Please set VITE_WEATHER_API_KEY"
+          "Weather API key not configured. Please set VITE_ACCUWEATHER_API_KEY"
         );
         setLoading(false);
         return;
       }
 
-      const response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?q=${cityName}&units=metric&appid=${apiKey}`
+      // Get location key from city name
+      const locationKey = await getLocationKey(cityName);
+
+      // Current weather
+      const currentResponse = await fetch(
+        `https://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}&details=true`
       );
 
-      if (!response.ok) {
-        throw new Error("City not found");
+      if (!currentResponse.ok) {
+        throw new Error("Failed to fetch current weather");
       }
 
-      const data = await response.json();
+      const currentData = await currentResponse.json();
+      const current = currentData[0];
 
+      // 5-day forecast
       const forecastResponse = await fetch(
-        `https://api.openweathermap.org/data/2.5/forecast?q=${cityName}&units=metric&appid=${apiKey}`
+        `https://dataservice.accuweather.com/forecasts/v1/daily/5day/${locationKey}?apikey=${apiKey}&details=true`
       );
+
+      if (!forecastResponse.ok) {
+        throw new Error("Failed to fetch forecast");
+      }
+
       const forecastData = await forecastResponse.json();
 
-      const forecast: ForecastDay[] = [];
-      for (let i = 0; i < forecastData.list.length; i += 8) {
-        const day = forecastData.list[i];
-        forecast.push({
-          day: new Date(day.dt * 1000).toLocaleDateString("en-US", {
+      const forecast: ForecastDay[] = forecastData.DailyForecasts.map(
+        (day: any) => ({
+          day: new Date(day.Date).toLocaleDateString("en-US", {
             weekday: "short",
           }),
-          high: Math.round(day.main.temp_max),
-          low: Math.round(day.main.temp_min),
-          condition: day.weather[0].main,
-          icon: day.weather[0].icon,
-        });
-      }
+          high: Math.round(day.Temperature.Maximum.Value),
+          low: Math.round(day.Temperature.Minimum.Value),
+          condition: day.Headline.Category,
+          icon: day.Headline.Icon.toString().padStart(2, "0"),
+        })
+      );
+
+      // Get city details
+      const detailsResponse = await fetch(
+        `https://dataservice.accuweather.com/locations/v1/${locationKey}?apikey=${apiKey}&details=true`
+      );
+      const detailsData = await detailsResponse.json();
 
       setWeather({
-        city: data.name,
-        country: data.sys.country,
-        temperature: Math.round(data.main.temp),
-        feelsLike: Math.round(data.main.feels_like),
-        condition: data.weather[0].main,
-        humidity: data.main.humidity,
-        windSpeed: Math.round(data.wind.speed * 3.6), // Convert m/s to km/h
-        visibility: Math.round(data.visibility / 1000),
-        pressure: data.main.pressure,
-        icon: data.weather[0].icon,
+        city: detailsData.LocalizedName,
+        country: detailsData.Country.ID,
+        temperature: Math.round(current.Temperature.Metric.Value),
+        feelsLike: Math.round(
+          current.RealFeelTemperature?.Metric.Value || current.Temperature.Metric.Value
+        ),
+        condition: current.WeatherText,
+        humidity: current.RelativeHumidity || 0,
+        windSpeed: Math.round(current.Wind?.Speed.Metric.Value || 0),
+        visibility: Math.round(current.Visibility?.Metric.Value || 10),
+        pressure: current.Pressure?.Metric.Value || 0,
+        icon: current.WeatherIcon.toString().padStart(2, "0"),
         forecast: forecast.slice(0, 5),
       });
     } catch (err) {
@@ -122,14 +159,25 @@ export default function Weather() {
 
   const getWeatherIcon = (iconCode: string, size = 64) => {
     const iconProps = { size, className: "text-cyan-300" };
-    if (iconCode.includes("01")) return <Sun {...iconProps} />;
-    if (iconCode.includes("02")) return <Cloud {...iconProps} />;
-    if (iconCode.includes("03")) return <Cloud {...iconProps} />;
-    if (iconCode.includes("04")) return <Cloud {...iconProps} />;
-    if (iconCode.includes("09")) return <CloudDrizzle {...iconProps} />;
-    if (iconCode.includes("10")) return <CloudRain {...iconProps} />;
-    if (iconCode.includes("11")) return <CloudRain {...iconProps} />;
-    if (iconCode.includes("13")) return <CloudSnow {...iconProps} />;
+    const code = parseInt(iconCode);
+
+    // AccuWeather icon codes
+    if (code === 1 || code === 2) return <Sun {...iconProps} />; // Sunny/Mostly sunny
+    if (code === 3 || code === 4 || code === 5 || code === 6)
+      return <Cloud {...iconProps} />; // Partly cloudy/Cloudy
+    if (code === 7 || code === 8) return <Cloud {...iconProps} />; // Mostly cloudy/Overcast
+    if (code === 11) return <CloudDrizzle {...iconProps} />; // Drizzle
+    if (code === 12 || code === 13 || code === 14 || code === 18)
+      return <CloudRain {...iconProps} />; // Rainy
+    if (code === 15 || code === 16 || code === 17 || code === 41 || code === 42)
+      return <CloudRain {...iconProps} />; // T-storms
+    if (code === 19 || code === 20 || code === 21 || code === 22 || code === 23)
+      return <CloudSnow {...iconProps} />; // Sleet/Snow
+    if (code === 24) return <CloudSnow {...iconProps} />; // Ice
+    if (code === 25 || code === 26 || code === 29)
+      return <CloudSnow {...iconProps} />; // Snow showers
+    if (code === 30 || code === 31) return <Cloud {...iconProps} />; // Hot/Cold
+
     return <Cloud {...iconProps} />;
   };
 
