@@ -4,8 +4,8 @@ import path from "path";
 import { createServer } from "./server";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  base: process.env.NODE_ENV === "production" ? "/Weather_Forecast/" : "/",
+export default defineConfig(({ mode, command }) => ({
+  base: command === "build" ? "/Weather_Forecast/" : "/",
   server: {
     host: "::",
     port: 8080,
